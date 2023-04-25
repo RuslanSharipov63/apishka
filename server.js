@@ -1,23 +1,23 @@
 const express = require('express');
-const { connectToDb, getDb } = require('./db');
+const mongoose = require('mongoose');
+
 
 const PORT = 3000;
+const URL = 'mongodb://localhost:27017/moviebox';
 
 const app = express(); /* инициализация создания приложения или сервера */
+app.use(express.json()); /* регистрируем миддлвар для вытягивания параметров из body, чтобы добавлять данные */
 
-let db;
+mongoose
+    .connect(URL)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(() => console.log(`DB connection error ${err}`))
 
-connectToDb((err) => {
-    if (!err) {
-        app.listen(PORT, (error) => {
+ app.listen(PORT, (error) => {
             error ? console.log(error) : console.log(`Listening port ${PORT}`);
         })
-        db = getDb();
-        console.log(db)
-    } else {
-        console.log(`DB connection error ${err}`)
-    }
-})
+
+let db;
 
 const handleError = (res, error) => {
     res.status(500).json({ error })
@@ -35,7 +35,7 @@ app.get('/movies', (req, res) => {
                 .status(200)
                 .json(movies)
         })
-        .catch(() => handleError(res, 'Something goes wrong..')) 
+        .catch(() => handleError(res, 'Something goes wrong..'))
 })
 
 
@@ -51,7 +51,7 @@ app.get('/movies/:id', (req, res) => {
                     .json(doc)
             })
             .catch(() => handleError(res, 'Something goes wrong...'))
-               
+
     } else {
         handleError(res, 'Wrong id...')
     }
@@ -73,9 +73,41 @@ app.delete('/movies/:id', (req, res) => {
                     .json(result)
             })
             .catch(() => handleError(res, 'Something goes wrong...'))
-               
+
     } else {
         handleError(res, 'Wrong id...')
-       
+
     }
 })
+
+app.post('/movies', (req, res) => {
+    db
+        .collection('movies')
+        .insertOne(req.body)
+        .then((result) => {
+            res
+                .status(200)
+                .json(result)
+        })
+        .catch(() => handleError(res, 'Something goes wrong...'))
+})
+
+
+app.patch('/movies/:id', (req, res) => {
+    if (ObjectId.isValid(req.params.id)) {
+        db
+            .collection('movies')
+            .updateOne({ _id: ObjectId(req.params.id) }, { $set: req.body })
+            .then((result) => {
+                res
+                    .status(200)
+                    .json(result)
+            })
+            .catch(() => handleError(res, 'Something goes wrong...'))
+
+    } else {
+        handleError(res, 'Wrong id...')
+
+    }
+})
+
